@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 contract TokenMaster is ERC721 {
   address public owner;
   uint256 public totalOccasions;
+  uint256 public totalSupply; //total no of nfts that exist
 
   struct Occasion {
     uint256 id;
@@ -19,6 +20,9 @@ contract TokenMaster is ERC721 {
   }
 
   mapping(uint256 => Occasion) occasions;
+  mapping(uint256 => mapping(address => bool)) public hasBought;
+  mapping(uint256 => mapping(uint256 => address)) public seatTaken;
+  mapping(uint256 => uint256[]) seatsTaken;
 
   modifier onlyOwner() {
     require(msg.sender == owner);
@@ -51,8 +55,33 @@ contract TokenMaster is ERC721 {
     );
   }
 
+  function mint(uint256 _id, uint256 _seat) public payable{
+
+    require(_id != 0); // _id is not equal to zero or less than total occassions
+    require(_id <= totalOccasions);
+
+    require(msg.value >= occasions[_id].cost); //require ETH sent is greater than cost
+    
+    require(seatTaken[_id][_seat] == address(0));// requires that seta is not taken and seat exists
+    require(_seat <= occasions[_id].maxTickets);
+
+
+    occasions[_id].tickets -= 1; //update ticket count
+    hasBought[_id][msg.sender] = true; //update buying/token status
+    seatTaken[_id][_seat] = msg.sender; //Assigns a seat
+    seatsTaken[_id].push(_seat); //update seats currently taken
+
+    totalSupply++;
+    _safeMint(msg.sender, totalSupply);
+  }
+
   function getOccasion(uint256 _id) public view returns (Occasion memory) {
     return occasions[_id];
+  }
+
+  
+  function getSeatsTaken(uint256 _id) public view returns (uint256[] memory) {
+    return seatsTaken[_id];
   }
 
 }
